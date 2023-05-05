@@ -1,0 +1,21 @@
+<table>
+	<thead>
+	<th>Year</th>
+	<th>Month</th>
+	<th>Total Failed</th>
+	<th>Total Successful</th>
+	<th>Total</th>
+	</thead>
+	<tbody>
+		{{#each main}}
+			<tr>
+				<td>{{dataMap.Year}}</td>
+				<td>{{dataMap.Month}}</td>
+				<td style="padding-left:30px;">{{dataMap.TotalFailed}}</td>
+				<td style="padding-left:30px;">{{dataMap.TotalSuccessful}}</td>
+				<td style="padding-left:30px;">{{dataMap.Total}}</td>
+			</tr>
+		{{/each}}
+	</tbody>
+</table>
+

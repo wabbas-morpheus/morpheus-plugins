@@ -1,0 +1,17 @@
+<table>
+	<thead>
+	<th>Year</th>
+	<th>Month</th>
+	<th>Total Logins</th>
+	</thead>
+	<tbody>
+		{{#each main}}
+			<tr>
+				<td>{{dataMap.Year}}</td>
+				<td>{{dataMap.Month}}</td>
+				<td style="padding-left:30px;">{{dataMap.TotalUsers}}</td>
+			</tr>
+		{{/each}}
+	</tbody>
+</table>
+

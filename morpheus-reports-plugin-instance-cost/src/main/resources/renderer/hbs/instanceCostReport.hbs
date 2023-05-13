@@ -1,0 +1,25 @@
+<table>
+	<thead>
+	<th>ID</th>
+	<th>Name</th>
+	<th>Tenant</th>
+	<th>Cloud</th>
+	<th>Period</th>
+	<th>MTD</th>
+	<th>Total</th>
+	</thead>
+	<tbody>
+		{{#each main}}
+			<tr>
+				<td>{{dataMap.InstanceID}}</td>
+				<td>{{dataMap.InstanceName}}</td>
+				<td>{{dataMap.Tenant}}</td>
+				<td>{{dataMap.Cloud}}</td>
+				<td>{{dataMap.Period}}</td>
+				<td>{{dataMap.MonthToDate}}</td>
+				<td>{{dataMap.Total}}</td>
+			</tr>
+		{{/each}}
+	</tbody>
+</table>
+

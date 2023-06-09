@@ -1,0 +1,31 @@
+<table>
+	<thead>
+	<th>Event Id</th>
+	<th>Instance Id</th>
+	<th>Instance Name</th>
+	<th>Event Title</th>
+	<th>Task Id</th>
+	<th>Status</th>
+	<th>Task Output</th>
+	<th>Message</th>
+	<th>Error</th>
+	<th>Date</th>
+	</thead>
+	<tbody>
+		{{#each main}}
+			<tr>
+				<td>{{dataMap.EventId}}</td>
+				<td>{{dataMap.InstanceId}}</td>
+				<td>{{dataMap.InstanceName}}</td>
+				<td>{{dataMap.EventTitle}}</td>
+				<td>{{dataMap.TaskId}}</td>
+				<td>{{dataMap.Status}}</td>
+				<td>{{dataMap.TaskOutput}}</td>
+				<td>{{dataMap.TaskMessage}}</td>
+				<td>{{dataMap.TaskError}}</td>
+				<td>{{dataMap.StartDate}}</td>
+			</tr>
+		{{/each}}
+	</tbody>
+</table>
+

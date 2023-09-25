@@ -86,7 +86,7 @@ class CatalogsWidget extends React.Component {
                     {row.id ? row.id : ''}
                   </td>
                   <td className="col-md nowrap">
-                    {row.name ? row.name : ''}
+                    <a href={'/service-catalog/catalog/'+ (row.id ? row.id : '')+'/add'}>{row.name ? row.name : ''}</a>
                   </td>
                   <td className="col-md nowrap">
                     {row.name ? row.visibility : ''}

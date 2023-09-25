@@ -8,6 +8,8 @@ import com.morpheusdata.model.ReportResult
 import com.morpheusdata.model.ReportType
 import com.morpheusdata.model.ReportResultRow
 import com.morpheusdata.model.ContentSecurityPolicy
+import com.morpheusdata.model.User
+import com.morpheusdata.model.Account
 import com.morpheusdata.views.HTMLResponse
 import com.morpheusdata.views.ViewModel
 import com.morpheusdata.response.ServiceResponse
@@ -69,6 +71,40 @@ class CustomReportProvider extends AbstractReportProvider {
 	HTMLResponse renderTemplate(ReportResult reportResult, Map<String, List<ReportResultRow>> reportRowsBySection) {
 		ViewModel<String> model = new ViewModel<String>()
 		model.object = reportRowsBySection
+		// User myUser = new User()
+		// myUser.setFirstName("Waqas Abbas")
+		// reportResult.setCreatedBy(myUser)
+
+		User createdBy = reportResult.getCreatedBy()
+		Account reportAccount = reportResult.getAccount()
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		if (reportResult?.getType()){
+			log.info("-------===========>>>>>>>>>>>>Get Type = ${reportResult?.getType()}")
+		} else{
+			log.info("getType is null")
+		}
+		if (createdBy?.firstName){
+			log.info("-------===========>>>>>>>>>>>>Created By = ${createdBy.firstName}")
+		} else{
+			log.info("firtname is null")
+		}
+
+		if (reportAccount?.accountName){
+			log.info("-------===========>>>>>>>>>>>>Created By = ${reportAccount?.accountName}")
+		} else{
+			log.info("Account name is null")
+		}
+
+
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+		log.info("-------===========>>>>>>>>>>>>>>>>>>>>>>>>>==============----------")
+
 		if (reportResult.configMap?.perDayChkbx){
 				getRenderer().renderTemplate("hbs/logonPerDayReport", model)
 			} else {

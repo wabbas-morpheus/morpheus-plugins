@@ -1,0 +1,105 @@
+buildscript {
+	repositories {
+		mavenLocal()
+		mavenCentral()
+		maven { url "https://plugins.gradle.org/m2/" }	
+	}
+	dependencies {
+		classpath "com.github.jengelman.gradle.plugins:shadow:6.0.0"
+		classpath "com.bertramlabs.plugins:asset-pipeline-gradle:$assetPipelineVersion"
+		classpath "com.bertramlabs.plugins:jsx-asset-pipeline:$assetPipelineVersion"
+	}
+}
+
+
+apply plugin:'java'
+apply plugin:'groovy'
+apply plugin:'idea'
+apply plugin:'com.github.johnrengelman.shadow'
+apply plugin:'asset-pipeline'
+
+group = 'com.morpheusdata'
+ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
+version '1.0.4'
+
+sourceCompatibility = '1.11'
+targetCompatibility = '1.11'
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+}
+
+configurations {
+	provided
+}
+
+dependencies {
+	provided "com.morpheusdata:morpheus-plugin-api:$morphPluginApiVersion"
+	provided "org.codehaus.groovy:groovy-all:$groovyVersion"
+	implementation "org.slf4j:slf4j-api:$slf4jVersion"
+	implementation "org.slf4j:slf4j-parent:$slf4jVersion"
+
+	// Include morpheus-core and it's dependencies
+	testImplementation "com.morpheusdata:morpheus-plugin-api:$morphPluginApiVersion"
+	testImplementation 'io.reactivex.rxjava2:rxjava:2.2.0'
+	testImplementation "org.slf4j:slf4j-parent:$slf4jVersion"
+
+	testImplementation "org.codehaus.groovy:groovy-all:$groovyVersion"
+	testImplementation 'net.bytebuddy:byte-buddy:1.9.3'
+	testImplementation 'org.objenesis:objenesis:2.6'
+	testImplementation "org.spockframework:spock-core:$spockVersion"
+	testImplementation 'cglib:cglib-nodep:3.2.12'
+}
+
+sourceSets {
+	main {
+		compileClasspath += configurations.provided
+	}
+}
+
+assets {
+	packagePlugin = false //set to true if this is a library
+}
+
+jar {
+	manifest {
+		attributes(
+			'Plugin-Class': 'com.morpheusdata.dashboard.MorpheusHomeDashboardPlugin',
+			'Plugin-Version': version,
+			'Morpheus-Name': 'Morpheus Standard Dashboard',
+			'Morpheus-Organization': 'morpheus',
+			'Morpheus-Code': 'morpheus-home-dashboard-plugin',
+			'Morpheus-Description': 'Plugin containing the standard Morpheus Dashboard Widgets',
+			'Morpheus-Logo': 'assets/morpheus.svg',
+			'Morpheus-Logo-Dark': 'assets/morpheus.svg',
+			'Morpheus-Color': '#ffffff',
+			'Morpheus-Labels': 'Dashboard',
+			'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-dashboard-plugin',
+			'Morpheus-Min-Appliance-Version': "6.0.0"
+		)
+	}
+}
+
+java {
+	withSourcesJar()
+	withJavadocJar()
+}
+
+task(console, dependsOn: 'classes', type: JavaExec) {
+	main = 'groovy.ui.Console'
+	classpath = sourceSets.main.runtimeClasspath
+}
+
+test {
+	testLogging {
+		exceptionFormat = 'full'
+		showStandardStreams = true
+	}
+}
+
+tasks.withType(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	destinationDirectory = file("$rootDir/plugins")
+}
+
+tasks.assemble.dependsOn tasks.shadowJar

@@ -50,7 +50,7 @@ class CatalogsWidget extends React.Component {
 
   setData(results) {
     //set it
-    console.log("results = "+results);
+    //console.log("results = "+results);
     var newState = {};
     newState.data = {};
     // newState.data.config = results.config;

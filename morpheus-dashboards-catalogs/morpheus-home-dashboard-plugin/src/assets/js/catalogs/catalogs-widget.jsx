@@ -76,7 +76,7 @@ class CatalogsWidget extends React.Component {
     //render
     return (
       <Widget>
-        <WidgetHeader icon="/assets/dashboard.svg#logs" title="First 10 Catalogs" link="/provisioning/catalog"/>
+        <WidgetHeader icon="/assets/matrix-scene_10913.png" title="First 10 Catalogs" link="/provisioning/catalog"/>
         <div className="dashboard-widget-content">
           <table className={'widget-table' + (showTable ? '' : ' hidden')}>
             <tbody>

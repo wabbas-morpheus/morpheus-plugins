@@ -49,6 +49,7 @@ class CatalogItemProvider extends AbstractDashboardItemTypeProvider {
 
 	@Override
 	DashboardItemType getDashboardItemType() {
+
 		def rtn = new DashboardItemType()
 		//populate it
 		//rtn.uuid = ?
@@ -61,7 +62,9 @@ class CatalogItemProvider extends AbstractDashboardItemTypeProvider {
 		rtn.templatePath = 'hbs/catalogs/catalogs-widget'
 		rtn.scriptPath = 'catalogs/catalogs-widget.js'
 		//set permissions
-		rtn.permission = morpheusContext.getPermission().getByCode('provisioning').blockingGet()
+		log.info("getting dashboard item type------->>>>>>>>>>>>>>1")
+		rtn.permission = morpheusContext.getPermission().getByCode('cats').blockingGet()
+		log.info("getting dashboard item type------->>>>>>>>>>>>>>2")
 		def accessTypes = ['read', 'full']
 		rtn.setAccessTypes(accessTypes)
 		return rtn

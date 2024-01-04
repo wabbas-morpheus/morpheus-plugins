@@ -1,0 +1,214 @@
+package com.morpheusdata.reports
+
+import com.morpheusdata.core.AbstractReportProvider
+import com.morpheusdata.core.MorpheusContext
+import com.morpheusdata.core.Plugin
+import com.morpheusdata.model.OptionType
+import com.morpheusdata.model.ReportResult
+import com.morpheusdata.model.ReportType
+import com.morpheusdata.model.ReportResultRow
+import com.morpheusdata.model.ContentSecurityPolicy
+import com.morpheusdata.views.HTMLResponse
+import com.morpheusdata.views.ViewModel
+import com.morpheusdata.response.ServiceResponse
+import groovy.sql.GroovyRowResult
+import groovy.sql.Sql
+import groovy.util.logging.Slf4j
+import io.reactivex.Observable;
+
+import java.sql.Connection
+
+/**
+ * Report that list total number of users logins per month. Also includes option to list unique user logins per month
+ * This report does not take into account user permissions currently and simply uses a direct SQL Connection using Groovy SQL with RxJava to generate a set of results.
+ *
+ * A renderer is also defined to render the HTML via Handlebars templates.
+ *
+ * @author Waqas Abbas
+ */
+ @Slf4j
+class CustomReportProvider extends AbstractReportProvider {
+	Plugin plugin
+	MorpheusContext morpheusContext
+	int totalCores = 0
+	int totalStorage = 0
+	int totalMemory = 0
+
+	CustomReportProvider(Plugin plugin, MorpheusContext context) {
+		this.plugin = plugin
+		this.morpheusContext = context
+	}
+
+	@Override
+	MorpheusContext getMorpheus() {
+		morpheusContext
+	}
+
+	@Override
+	Plugin getPlugin() {
+		plugin
+	}
+
+	@Override
+	String getCode() {
+		'custom-report-used-cores-storage-memory'
+	}
+
+	@Override
+	String getName() {
+		'TENANT RESOURCE ALLOCATION (Instance + Cluster Host)'
+	}
+
+	 ServiceResponse validateOptions(Map opts) {
+		 return ServiceResponse.success()
+	 }
+
+	/**
+	 * Demonstrates building a TaskConfig to get details about the Instance and renders the html from the specified template.
+	 * @param instance details of an Instance
+	 * @return
+	 */
+	@Override
+	HTMLResponse renderTemplate(ReportResult reportResult, Map<String, List<ReportResultRow>> reportRowsBySection) {
+		ViewModel<String> model = new ViewModel<String>()
+		def Map<String,Object> my_data = [totalCores:totalCores.toString(),
+										  totalStorage:totalStorage.toString(),
+										  totalMemory:totalMemory.toString(),
+										  items:reportRowsBySection.main]
+
+		model.object = my_data 
+
+		// log.info("render total cores = ${totalCores.toString()}")
+		// log.info("render total storage = ${totalStorage.toString()}")
+		// log.info("render total memory = ${totalMemory.toString()}")
+		log.info("Account = ${reportResult.getAccount().getAccountName()}")
+
+		getRenderer().renderTemplate("hbs/reportResults", model)
+			
+		
+	}
+
+	/**
+	 * Allows various sources used in the template to be loaded
+	 * @return
+	 */
+	@Override
+	ContentSecurityPolicy getContentSecurityPolicy() {
+		def csp = new ContentSecurityPolicy()
+		csp.scriptSrc = '*.jsdelivr.net'
+		csp.frameSrc = '*.digitalocean.com'
+		csp.imgSrc = '*.wikimedia.org'
+		csp.styleSrc = 'https: *.bootstrapcdn.com'
+		csp
+	}
+
+
+	void process(ReportResult reportResult) {
+		morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.generating).blockingGet();
+		Long displayOrder = 0
+		totalCores = 0
+		totalStorage = 0
+		totalMemory = 0
+		
+		List<GroovyRowResult> instanceResults = []
+		List<GroovyRowResult> clusterHostsResults = []
+
+		
+		// currentTenantId = reportResult.config.get('tenantId')
+		log.info("tenant = ${reportResult.getConfig()}")
+		withDbConnection { Connection dbConnection ->
+
+			// String dbQParam ="''" 
+			// if (reportResult.configMap?.tenantId && currentTenantId ==1){
+			// 		dbQParam ="'${reportResult.configMap?.tenantId}'"
+			// }else{
+			// 	dbQParam ="'${currentTenantId}'"
+			// } 
+
+			String dbQParam ="''" 
+			if (reportResult.configMap?.tenantId){
+				dbQParam ="'${reportResult.configMap?.tenantId}'"
+			}else{
+				dbQParam ="'1'"
+			} 
+			
+			instanceResults = new Sql(dbConnection).rows("select id,concat(name,' (Instance)')as name,max_cores,max_storage,max_memory from instance where account_id="+dbQParam+";")
+			clusterHostsResults = new Sql(dbConnection).rows("select cs.id,concat(cs.name,' (cluster host)')as name,cs.max_cores,cs.max_storage,cs.max_memory from compute_server cs join compute_server_group csg on cs.server_group_id=csg.id where cs.account_id="+dbQParam+";")	
+			instanceResults.addAll(clusterHostsResults)
+			instanceResults.collect{
+				totalCores +=it.max_cores
+				totalStorage +=it.max_storage.intdiv(1024).intdiv(1024).intdiv(1024)
+				totalMemory +=it.max_memory.intdiv(1024).intdiv(1024).intdiv(1024)
+				}
+			
+		}
+		
+		//log.info("Results: ${results}")
+		Observable<GroovyRowResult> observable = Observable.fromIterable(instanceResults) as Observable<GroovyRowResult>
+		observable.map{ resultRow ->
+			log.info("Mapping resultRow ${resultRow}")
+			def Map<String,Object> data = [:]
+			
+			data = [Id: resultRow.id.toString(),
+					ObjectName: resultRow.name.toString(),
+					MaxCores: resultRow.max_cores.toString(),
+					MaxStorage: resultRow.max_storage.intdiv(1024).intdiv(1024).intdiv(1024).toString(),
+					MaxMem: resultRow.max_memory.intdiv(1024).intdiv(1024).intdiv(1024).toString()]
+			
+			
+			
+			ReportResultRow resultRowRecord = new ReportResultRow(section: ReportResultRow.SECTION_MAIN, displayOrder: displayOrder++, dataMap: data)
+			//log.info("resultRowRecord: ${resultRowRecord.dump()}")
+			return resultRowRecord
+		}.buffer(50).doOnComplete {
+			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.ready).blockingGet();
+		}.doOnError { Throwable t ->
+			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.failed).blockingGet();
+		}.subscribe {resultRows ->
+			morpheus.report.appendResultRows(reportResult,resultRows).blockingGet()
+		}
+
+	}
+
+	 @Override
+	 String getDescription() {
+		 return "Report total number of resources (CPU,Storage,Memory) by tenant"
+	 }
+
+	 @Override
+	 String getCategory() {
+		 return 'inventory'
+	 }
+
+	 @Override
+	 Boolean getOwnerOnly() {
+		 return false
+	 }
+
+	 @Override
+	 Boolean getMasterOnly() {
+		 return true
+	 }
+
+	 @Override
+	 Boolean getSupportsAllZoneTypes() {
+		 return true
+	 }
+
+	 OptionType tenantIdTextField = new OptionType(
+	 										code: 'tenant-id-text-field', 
+	 										name: 'Tenant Id', 
+	 										fieldName: 'tenantId', 
+	 										fieldContext: 'config', 
+	 										fieldLabel: 'Tenant Id', 
+	 										displayOrder: 0,
+	 										helpBlock:'Specify the id of the tenant'
+	 										)
+
+
+
+	 @Override
+	 List<OptionType> getOptionTypes() {
+		 [tenantIdTextField]
+	 }
+ }

@@ -17,7 +17,7 @@ class MorpheusHomeDashboardPlugin extends Plugin {
 
 	@Override
 	String getCode() {
-		return 'morpheus-home-dashboard-plugin'
+		return 'morpheus-home-dashboard-plugin2'
 	}
 
 	@Override
@@ -95,16 +95,18 @@ class MorpheusHomeDashboardPlugin extends Plugin {
 			this.pluginProviders.put(clusterListDashboardProvider.code, clusterListDashboardProvider)
 			
 
-
+			CatalogsController  catalogsController = new CatalogsController(this,morpheus)
 			//Catalogs
 			CatalogItemProvider catalogItemProvider = new CatalogItemProvider(this, morpheus)
 			this.pluginProviders.put(catalogItemProvider.code, catalogItemProvider)
 			
-			CatalogsController  catalogsApi = new CatalogsController(this,morpheus)
+			
+			
 			this.setRenderer(new HandlebarsRenderer(this.classLoader))
-			this.controllers.add(catalogsApi)
+			this.controllers.add(catalogsController)
+			this.setPermissions(catalogsController.getPermissions())
 
-			//this.setPermissions(catalogsApi.getPermissions())
+			
 			
 			
 		} catch(e) {

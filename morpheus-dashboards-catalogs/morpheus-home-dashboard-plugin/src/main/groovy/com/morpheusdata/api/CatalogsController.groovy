@@ -46,17 +46,17 @@ class CatalogsController implements PluginController {
   List<Route> getRoutes() {
     log.info("Get Routes")
     [
-            Route.build("/catalogs", "catalogs", [Permission.build("provisioning", "full")]),
+            Route.build("/catalogs", "catalogs", [Permission.build("cats", "full")]),
             //Route.build("/accounts/count", "count", [Permission.build("accounts-api", "full")]),
     ]
   }
 
-  // public getPermissions() {
-  //   log.info("Getting permissions")
-  //   return [
-  //           new Permission('Catalogs Widget Plugin', 'catalogs-api', [Permission.AccessType.none, Permission.AccessType.read, Permission.AccessType.full]),
-  //   ]
-  // }
+  public getPermissions() {
+    log.info("Getting permissions")
+    return [
+            Permission.build('Waqas Dashboard','cats', [Permission.AccessType.none, Permission.AccessType.full])
+    ]
+  }
 
 
   

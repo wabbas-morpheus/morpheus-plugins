@@ -1,0 +1,61 @@
+<div class="intro-stats">
+    <h2>Stats</h2>
+    <div class="count-stats">
+      
+        <div class="stats-container">
+          <span class="big-stat">
+            
+              {{totalCores}}
+            
+          </span>
+          <div class="stat-label">Total Cores</div>
+        </div>
+      
+        <div class="stats-container">
+          <span class="big-stat">
+            
+              {{totalStorage}}GiB
+            
+          </span>
+          <div class="stat-label">Total Storage</div>
+        </div>
+      
+      
+        <div class="stats-container">
+          <span class="big-stat">
+            
+              {{totalMemory}}GiB
+            
+          </span>
+          <div class="stat-label">Total Memory</div>
+        </div>
+      
+        
+      
+    </div>
+  </div>
+<br>
+<br>
+<br>
+<table>
+	<thead>
+	<th>Id</th>
+	<th>Name</th>
+	<th>Cores</th>
+	<th>Storage (GB)</th>
+	<th>Memory (GB)</th>
+	</thead>
+	<tbody>
+		{{#each items}}
+			<tr>
+				<td>{{dataMap.Id}}</td>
+				<td>{{dataMap.ObjectName}}</td>
+				<td>{{dataMap.MaxCores}}</td>
+				<td>{{dataMap.MaxStorage}}</td>
+				<td>{{dataMap.MaxMem}}</td>
+				
+			</tr>
+		{{/each}}
+	</tbody>
+</table>
+

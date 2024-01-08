@@ -11,6 +11,10 @@ import com.morpheusdata.model.ContentSecurityPolicy
 import com.morpheusdata.views.HTMLResponse
 import com.morpheusdata.views.ViewModel
 import com.morpheusdata.response.ServiceResponse
+
+import com.morpheusdata.model.User
+import com.morpheusdata.model.Account
+
 import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 import groovy.util.logging.Slf4j
@@ -30,9 +34,9 @@ import java.sql.Connection
 class CustomReportProvider extends AbstractReportProvider {
 	Plugin plugin
 	MorpheusContext morpheusContext
-	int totalCores = 0
-	int totalStorage = 0
-	int totalMemory = 0
+	// int totalCores = 0
+	// int totalStorage = 0
+	// int totalMemory = 0
 
 	CustomReportProvider(Plugin plugin, MorpheusContext context) {
 		this.plugin = plugin
@@ -71,18 +75,12 @@ class CustomReportProvider extends AbstractReportProvider {
 	@Override
 	HTMLResponse renderTemplate(ReportResult reportResult, Map<String, List<ReportResultRow>> reportRowsBySection) {
 		ViewModel<String> model = new ViewModel<String>()
-		def Map<String,Object> my_data = [totalCores:totalCores.toString(),
-										  totalStorage:totalStorage.toString(),
-										  totalMemory:totalMemory.toString(),
+		def Map<String,Object> my_data = [totalCores:reportRowsBySection.header[0].dataMap.TotalCores,
+										  totalStorage:reportRowsBySection.header[0].dataMap.TotalStorage,
+										  totalMemory:reportRowsBySection.header[0].dataMap.TotalMemory,
 										  items:reportRowsBySection.main]
 
 		model.object = my_data 
-
-		// log.info("render total cores = ${totalCores.toString()}")
-		// log.info("render total storage = ${totalStorage.toString()}")
-		// log.info("render total memory = ${totalMemory.toString()}")
-		log.info("Account = ${reportResult.getAccount().getAccountName()}")
-
 		getRenderer().renderTemplate("hbs/reportResults", model)
 			
 		
@@ -106,35 +104,39 @@ class CustomReportProvider extends AbstractReportProvider {
 	void process(ReportResult reportResult) {
 		morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.generating).blockingGet();
 		Long displayOrder = 0
-		totalCores = 0
-		totalStorage = 0
-		totalMemory = 0
+		int totalCores = 0
+		int totalStorage = 0
+		int totalMemory = 0
 		
 		List<GroovyRowResult> instanceResults = []
 		List<GroovyRowResult> clusterHostsResults = []
 
+
 		
-		// currentTenantId = reportResult.config.get('tenantId')
-		log.info("tenant = ${reportResult.getConfig()}")
+		Account reportAccount = reportResult.getAccount() //Get current account details
+		
 		withDbConnection { Connection dbConnection ->
 
-			// String dbQParam ="''" 
-			// if (reportResult.configMap?.tenantId && currentTenantId ==1){
-			// 		dbQParam ="'${reportResult.configMap?.tenantId}'"
-			// }else{
-			// 	dbQParam ="'${currentTenantId}'"
-			// } 
-
+			//Get the current users account (tenant) ID by account name
+			int currentAccountId = new Sql(dbConnection).rows("select id from account where name='"+reportAccount?.getName()+"';")[0].id
+			log.info("Current Tenant ID = ${currentAccountId}")
 			String dbQParam ="''" 
-			if (reportResult.configMap?.tenantId){
-				dbQParam ="'${reportResult.configMap?.tenantId}'"
-			}else{
-				dbQParam ="'1'"
+			if (reportResult.configMap?.tenantId && currentAccountId ==1){ //If master tenant then run report for specified account id on the UI
+					dbQParam ="'${reportResult.configMap?.tenantId}'"
+			}else{//If running the report from the subtenant then only scope it to that subtenant 
+				dbQParam ="'${currentAccountId}'"
 			} 
+
+			//Get Instances
+			instanceResults = new Sql(dbConnection).rows("select id,concat(name,' (Instance)')as name,max_cores,max_storage,max_memory,account_id as tenant_id from instance where account_id="+dbQParam+";")
 			
-			instanceResults = new Sql(dbConnection).rows("select id,concat(name,' (Instance)')as name,max_cores,max_storage,max_memory from instance where account_id="+dbQParam+";")
-			clusterHostsResults = new Sql(dbConnection).rows("select cs.id,concat(cs.name,' (cluster host)')as name,cs.max_cores,cs.max_storage,cs.max_memory from compute_server cs join compute_server_group csg on cs.server_group_id=csg.id where cs.account_id="+dbQParam+";")	
+			//Get Cluster hosts
+			clusterHostsResults = new Sql(dbConnection).rows("select cs.id,concat(cs.name,' (cluster host)')as name,cs.max_cores,cs.max_storage,cs.max_memory,cs.account_id as tenant_id from compute_server cs join compute_server_group csg on cs.server_group_id=csg.id where cs.account_id="+dbQParam+";")	
+			
+			//Combine the results 
 			instanceResults.addAll(clusterHostsResults)
+			
+			//Calculate the totals
 			instanceResults.collect{
 				totalCores +=it.max_cores
 				totalStorage +=it.max_storage.intdiv(1024).intdiv(1024).intdiv(1024)
@@ -142,23 +144,34 @@ class CustomReportProvider extends AbstractReportProvider {
 				}
 			
 		}
+
+		//Create a row record to show the totals on the header section of the reports template
+		def Map<String,Object> headData = [:]
+		headData = [TotalCores:totalCores.toString(),
+					TotalStorage:totalStorage.toString(),
+					TotalMemory:totalMemory.toString()]
+		ReportResultRow resultRowRecordHead = new ReportResultRow(section: ReportResultRow.SECTION_HEADER, displayOrder: displayOrder++, dataMap: headData)
+		morpheus.report.appendResultRows(reportResult,[resultRowRecordHead]).blockingGet()
 		
-		//log.info("Results: ${results}")
+		//Prepare the list of instances and cluster hosts for the reports template
 		Observable<GroovyRowResult> observable = Observable.fromIterable(instanceResults) as Observable<GroovyRowResult>
 		observable.map{ resultRow ->
 			log.info("Mapping resultRow ${resultRow}")
 			def Map<String,Object> data = [:]
 			
+			
 			data = [Id: resultRow.id.toString(),
 					ObjectName: resultRow.name.toString(),
 					MaxCores: resultRow.max_cores.toString(),
 					MaxStorage: resultRow.max_storage.intdiv(1024).intdiv(1024).intdiv(1024).toString(),
-					MaxMem: resultRow.max_memory.intdiv(1024).intdiv(1024).intdiv(1024).toString()]
+					MaxMem: resultRow.max_memory.intdiv(1024).intdiv(1024).intdiv(1024).toString(),
+					TenantId:resultRow.tenant_id.toString()]
 			
 			
 			
 			ReportResultRow resultRowRecord = new ReportResultRow(section: ReportResultRow.SECTION_MAIN, displayOrder: displayOrder++, dataMap: data)
 			//log.info("resultRowRecord: ${resultRowRecord.dump()}")
+			//resultRowRecord.setSection(section: ReportResultRow.SECTION_HEADER, displayOrder: displayOrder++, dataMap: data)
 			return resultRowRecord
 		}.buffer(50).doOnComplete {
 			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.ready).blockingGet();
@@ -187,7 +200,7 @@ class CustomReportProvider extends AbstractReportProvider {
 
 	 @Override
 	 Boolean getMasterOnly() {
-		 return true
+		 return false
 	 }
 
 	 @Override
@@ -202,7 +215,7 @@ class CustomReportProvider extends AbstractReportProvider {
 	 										fieldContext: 'config', 
 	 										fieldLabel: 'Tenant Id', 
 	 										displayOrder: 0,
-	 										helpBlock:'Specify the id of the tenant'
+	 										helpBlock:'(Optional) - Specify the tenant id if running the report from the master tenant.'
 	 										)
 
 

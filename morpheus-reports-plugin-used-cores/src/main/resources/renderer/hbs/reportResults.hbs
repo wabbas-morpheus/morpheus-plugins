@@ -8,7 +8,7 @@
               {{totalCores}}
             
           </span>
-          <div class="stat-label">Total Cores</div>
+          <div class="stat-label">Total CPUs</div>
         </div>
       
         <div class="stats-container">
@@ -44,6 +44,7 @@
 	<th>Cores</th>
 	<th>Storage (GB)</th>
 	<th>Memory (GB)</th>
+	<th>Tenant ID</th>
 	</thead>
 	<tbody>
 		{{#each items}}
@@ -53,6 +54,7 @@
 				<td>{{dataMap.MaxCores}}</td>
 				<td>{{dataMap.MaxStorage}}</td>
 				<td>{{dataMap.MaxMem}}</td>
+				<td>{{dataMap.TenantId}}</td>
 				
 			</tr>
 		{{/each}}

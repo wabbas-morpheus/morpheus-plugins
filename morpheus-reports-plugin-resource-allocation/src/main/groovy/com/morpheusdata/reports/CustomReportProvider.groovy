@@ -55,7 +55,7 @@ class CustomReportProvider extends AbstractReportProvider {
 
 	@Override
 	String getCode() {
-		'custom-report-used-cores-storage-memory'
+		'morpheus-reports-plugin-resource-allocation'
 	}
 
 	@Override
@@ -171,7 +171,6 @@ class CustomReportProvider extends AbstractReportProvider {
 			
 			ReportResultRow resultRowRecord = new ReportResultRow(section: ReportResultRow.SECTION_MAIN, displayOrder: displayOrder++, dataMap: data)
 			//log.info("resultRowRecord: ${resultRowRecord.dump()}")
-			//resultRowRecord.setSection(section: ReportResultRow.SECTION_HEADER, displayOrder: displayOrder++, dataMap: data)
 			return resultRowRecord
 		}.buffer(50).doOnComplete {
 			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.ready).blockingGet();

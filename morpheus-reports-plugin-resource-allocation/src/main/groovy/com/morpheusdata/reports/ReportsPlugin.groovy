@@ -9,7 +9,7 @@ class ReportsPlugin extends Plugin {
 
 	@Override
 	String getCode() {
-		return 'morpheus-reports-plugin-used-cores'
+		return 'morpheus-reports-plugin-resource-allocation'
 	}
 
 	@Override
